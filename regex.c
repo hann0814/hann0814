@@ -10,7 +10,7 @@
 
 #define MATCH_NUM 3
 
-void print_regerror(int err, regex_t *reg)
+void printregerror(int err, regex_t *reg)
 {
     char errbuf[512];
     regerror(err, reg, errbuf, sizeof(errbuf));
@@ -21,11 +21,11 @@ int main(void)
 {
     int fd;
     struct stat st;
-    char *mmap_ptr = NULL;
+    char *mmap_p = NULL;
     regex_t reg;
     int ret;
     regmatch_t match[MATCH_NUM];
-
+    
     fd = open("url.html", O_RDONLY);
     if(fd < 0)
     {
@@ -35,8 +35,8 @@ int main(void)
     fstat(fd, &st);
     size_t fsize = st.st_size;
 
-    mmap_ptr = (char *)mmap(NULL, fsize, PROT_READ, MAP_PRIVATE, fd, 0);
-    if(mmap_ptr == MAP_FAILED)
+    mmap_p = (char *)mmap(NULL, fsize, PROT_READ, MAP_PRIVATE, fd, 0);
+    if(mmap_p == MAP_FAILED)
     {
         perror("mmap fail");
         close(fd);
@@ -48,22 +48,21 @@ int main(void)
     ret = regcomp(&reg, pat, REG_EXTENDED);
     if(ret != 0)
     {
-        print_regerror(ret, &reg);
-        munmap(mmap_ptr, fsize);
+        printregerror(ret, &reg);
+        munmap(mmap_p, fsize);
         return -1;
     }
-
-    char *cur_ptr = mmap_ptr;
+    char *cur_p = mmap_p;
     while(1)
     {
-        ret = regexec(&reg, cur_ptr, MATCH_NUM, match, 0);
+        ret = regexec(&reg, cur_p, MATCH_NUM, match, 0);
         if(ret == REG_NOMATCH)
         {
             break;
         }
         if(ret != 0)
         {
-            print_regerror(ret, &reg);
+            printregerror(ret, &reg);
             break;
         }
 
@@ -79,10 +78,9 @@ int main(void)
 
             printf("【新闻链接】%s\n【新闻标题】%s\n------------------------\n", url, title);
         }
-        cur_ptr += match[0].rm_eo;
+        cur_p += match[0].rm_eo;
     }
-
     regfree(&reg);
-    munmap(mmap_ptr, fsize);
+    munmap(mmap_p, fsize);
     return 0;
 }
